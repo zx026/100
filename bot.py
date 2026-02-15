@@ -14,8 +14,8 @@ from telegram.ext import Application, CommandHandler, MessageHandler, filters, C
 # 🔑 BOT CONFIGURATION
 # ==============================
 
-TOKEN = "YOUR_TOKEN_HERE"  # <-- Apna Bot Token yaha daalo
-OWNER_ID = 123456789  # <-- Apna Telegram User ID yaha daalo
+TOKEN = "6580496721:AAE0E4NMPUUX2jpHy-SWV5boVCreQeWt6CY"  # <-- Apna Bot Token yaha daalo
+OWNER_ID = 8525538455  # <-- Apna Telegram User ID yaha daalo
 
 BOT_NAME = "SmartBot"
 DATA_FILE = "conversation_data.json"
