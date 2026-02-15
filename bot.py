@@ -1,6 +1,6 @@
 """
-Telegram Chat Bot with Data Storage (Owner Secured Version)
-Only bot owner can use /clear command
+Secure Telegram Learning Bot
+Owner Protected | No Name Spam | Anti Repeat
 """
 
 import json
@@ -11,28 +11,37 @@ from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
 
 # ==============================
-# 🔑 BOT CONFIGURATION
+# 🔑 CONFIG
 # ==============================
 
-TOKEN = "6580496721:AAE0E4NMPUUX2jpHy-SWV5boVCreQeWt6CY"  # <-- Apna Bot Token yaha daalo
-OWNER_ID = 8525538455  # <-- Apna Telegram User ID yaha daalo
-
+TOKEN = "PASTE_NEW_TOKEN_HERE"
+OWNER_ID = 8525538455
 BOT_NAME = "SmartBot"
 DATA_FILE = "conversation_data.json"
 
 # ==============================
-# 📂 DATA FUNCTIONS
+# 📂 DATA SYSTEM
 # ==============================
 
 def load_data():
     if os.path.exists(DATA_FILE):
-        with open(DATA_FILE, 'r', encoding='utf-8') as f:
+        with open(DATA_FILE, "r", encoding="utf-8") as f:
             return json.load(f)
     return {"conversations": {}, "learned_responses": {}}
 
 def save_data(data):
-    with open(DATA_FILE, 'w', encoding='utf-8') as f:
+    with open(DATA_FILE, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
+
+# ==============================
+# 🧹 CLEAN TEXT
+# ==============================
+
+def clean_text(text):
+    remove_words = ["rocky", "ROCKY"]
+    for word in remove_words:
+        text = text.replace(word, "")
+    return text.strip()
 
 # ==============================
 # 🧠 LEARNING SYSTEM
@@ -47,7 +56,7 @@ def learn_response(user_id, user_message, bot_message):
     data["conversations"][user_id].append({
         "user": user_message,
         "bot": bot_message,
-        "timestamp": datetime.now().isoformat()
+        "time": datetime.now().isoformat()
     })
 
     words = user_message.lower().split()
@@ -65,18 +74,13 @@ def learn_response(user_id, user_message, bot_message):
 
 def get_learned_response(message):
     data = load_data()
-    message_lower = message.lower()
+    words = message.lower().split()
 
-    words = message_lower.split()
     for word in words:
         if word in data["learned_responses"]:
             responses = data["learned_responses"][word]
             if responses:
                 return responses[-1]
-
-    for key in data["learned_responses"]:
-        if key in message_lower and data["learned_responses"][key]:
-            return data["learned_responses"][key][-1]
 
     return None
 
@@ -84,119 +88,101 @@ def get_learned_response(message):
 # 📌 COMMANDS
 # ==============================
 
-async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
-        f"Hello! I'm {BOT_NAME} 🤖\n\n"
-        "I work in groups and learn from conversations!\n\n"
-        "📌 Available Commands:\n"
-        "/start\n"
-        "/help\n"
-        "/learn\n"
-        "/clear (Owner Only)\n"
-        "/stats\n",
-        parse_mode='HTML'
+        f"Namaste 🙏\nMain {BOT_NAME} hoon.\nMain seekhta hoon aur reply karta hoon."
     )
 
-async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def help_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
-        "📖 Help Menu\n\n"
-        "• /start - Start bot\n"
-        "• /help - Show help\n"
-        "• /learn - Learning stats\n"
-        "• /clear - Owner only\n"
-        "• /stats - Show stats"
+        "/start\n/help\n/learn\n/stats\n/clear (Owner Only)"
     )
 
-async def learn_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    data = load_data()
-    learned_count = len(data["learned_responses"])
-    conv_count = sum(len(v) for v in data["conversations"].values())
-
-    await update.message.reply_text(
-        f"📚 Learning Stats\n\n"
-        f"Learned responses: {learned_count}\n"
-        f"Total conversations: {conv_count}\n"
-        f"Users: {len(data['conversations'])}"
-    )
-
-async def stats_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    data = load_data()
-    total_convs = sum(len(v) for v in data["conversations"].values())
-    total_learned = len(data["learned_responses"])
-
-    await update.message.reply_text(
-        f"📊 Statistics\n\n"
-        f"Total conversations: {total_convs}\n"
-        f"Learned patterns: {total_learned}\n"
-        f"Users: {len(data['conversations'])}"
-    )
-
-# 🔒 OWNER ONLY CLEAR
-async def clear_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_id = update.effective_user.id
-
-    if user_id != OWNER_ID:
-        await update.message.reply_text("❌ Only the bot owner can use this command!")
+async def clear(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if update.effective_user.id != OWNER_ID:
+        await update.message.reply_text("❌ Only owner allowed.")
         return
 
-    data = {"conversations": {}, "learned_responses": {}}
-    save_data(data)
+    save_data({"conversations": {}, "learned_responses": {}})
+    await update.message.reply_text("✅ Memory cleared.")
 
-    await update.message.reply_text("✅ Memory cleared successfully by owner!")
+async def stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    data = load_data()
+    total = sum(len(v) for v in data["conversations"].values())
+    await update.message.reply_text(
+        f"Users: {len(data['conversations'])}\n"
+        f"Messages: {total}\n"
+        f"Learned Words: {len(data['learned_responses'])}"
+    )
+
+async def learn(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    data = load_data()
+    await update.message.reply_text(
+        f"Learning Words: {len(data['learned_responses'])}"
+    )
 
 # ==============================
 # 💬 MESSAGE HANDLER
 # ==============================
 
+last_replies = {}
+
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    message_text = update.message.text
     user = update.message.from_user
-    user_name = user.first_name if user.first_name else "User"
     user_id = str(user.id)
+    message_text = clean_text(update.message.text)
 
-    learned_resp = get_learned_response(message_text)
+    if not message_text:
+        return
 
-    if learned_resp:
-        response = learned_resp
+    learned = get_learned_response(message_text)
+
+    if learned:
+        response = clean_text(learned)
     else:
-        msg_lower = message_text.lower()
+        msg = message_text.lower()
 
-        if any(word in msg_lower for word in ['hello', 'hi', 'hey', 'namaste']):
-            response = f"Namaste {user_name}! 🙏"
-        elif 'how are you' in msg_lower:
-            response = "I'm doing great! 😊"
-        elif 'who are you' in msg_lower:
-            response = f"I'm {BOT_NAME}, your smart learning bot!"
-        elif '?' in message_text:
-            response = "Good question! I'm still learning 😊"
+        if any(w in msg for w in ["hello", "hi", "hey", "namaste"]):
+            response = f"Namaste {user.first_name}! 🙏"
+        elif "how are you" in msg:
+            response = "Main badhiya hoon 😊"
+        elif "who are you" in msg:
+            response = f"Main {BOT_NAME} hoon."
+        elif "?" in msg:
+            response = "Achha sawaal hai 🤔"
         else:
-            responses = [
-                f"Interesting! Tell me more, {user_name}.",
-                f"Oh! {message_text} - that's cool!",
-                f"I see! Thanks for sharing, {user_name}.",
-                f"Aur batao {user_name}! 😄"
-            ]
-            response = random.choice(responses)
+            response = random.choice([
+                "Samajh gaya 👍",
+                "Interesting 😄",
+                "Aur batao!",
+                "Nice 🙂"
+            ])
+
+    # Anti repeat spam
+    if user_id in last_replies and last_replies[user_id] == response:
+        return
+
+    last_replies[user_id] = response
 
     await update.message.reply_text(response)
     learn_response(user_id, message_text, response)
 
 # ==============================
-# 🚀 MAIN FUNCTION
+# 🚀 MAIN
 # ==============================
 
 def main():
-    print("Starting Secure Telegram Bot...")
-    application = Application.builder().token(TOKEN).build()
+    print("Bot Running Secure Mode...")
+    app = Application.builder().token(TOKEN).build()
 
-    application.add_handler(CommandHandler("start", start_command))
-    application.add_handler(CommandHandler("help", help_command))
-    application.add_handler(CommandHandler("learn", learn_command))
-    application.add_handler(CommandHandler("clear", clear_command))
-    application.add_handler(CommandHandler("stats", stats_command))
-    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
+    app.add_handler(CommandHandler("start", start))
+    app.add_handler(CommandHandler("help", help_cmd))
+    app.add_handler(CommandHandler("clear", clear))
+    app.add_handler(CommandHandler("stats", stats))
+    app.add_handler(CommandHandler("learn", learn))
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
 
-    application.run_polling()
+    app.run_polling()
 
 if __name__ == "__main__":
     main()
