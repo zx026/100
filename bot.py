@@ -1,11 +1,13 @@
 """
-Secure Telegram Learning Bot
-Owner Protected | No Name Spam | Anti Repeat
+Hybrid Telegram Bot
+Learning + Local AI (Ollama)
+Owner Secured
 """
 
 import json
 import os
 import random
+import requests
 from datetime import datetime
 from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
@@ -20,7 +22,7 @@ BOT_NAME = "SmartBot"
 DATA_FILE = "conversation_data.json"
 
 # ==============================
-# 📂 DATA SYSTEM
+# 📂 DATA FUNCTIONS
 # ==============================
 
 def load_data():
@@ -42,6 +44,25 @@ def clean_text(text):
     for word in remove_words:
         text = text.replace(word, "")
     return text.strip()
+
+# ==============================
+# 🤖 AI FUNCTION (OLLAMA)
+# ==============================
+
+def get_ai_response(prompt):
+    try:
+        response = requests.post(
+            "http://localhost:11434/api/generate",
+            json={
+                "model": "llama3",
+                "prompt": prompt,
+                "stream": False
+            },
+            timeout=60
+        )
+        return response.json()["response"]
+    except:
+        return None
 
 # ==============================
 # 🧠 LEARNING SYSTEM
@@ -80,7 +101,7 @@ def get_learned_response(message):
         if word in data["learned_responses"]:
             responses = data["learned_responses"][word]
             if responses:
-                return responses[-1]
+                return random.choice(responses)
 
     return None
 
@@ -90,12 +111,7 @@ def get_learned_response(message):
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
-        f"Namaste 🙏\nMain {BOT_NAME} hoon.\nMain seekhta hoon aur reply karta hoon."
-    )
-
-async def help_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text(
-        "/start\n/help\n/learn\n/stats\n/clear (Owner Only)"
+        f"Namaste 🙏\nMain {BOT_NAME} hoon.\nAI + Learning Mode Active 🔥"
     )
 
 async def clear(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -115,12 +131,6 @@ async def stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"Learned Words: {len(data['learned_responses'])}"
     )
 
-async def learn(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    data = load_data()
-    await update.message.reply_text(
-        f"Learning Words: {len(data['learned_responses'])}"
-    )
-
 # ==============================
 # 💬 MESSAGE HANDLER
 # ==============================
@@ -135,30 +145,26 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not message_text:
         return
 
+    # 1️⃣ Check learned JSON
     learned = get_learned_response(message_text)
 
     if learned:
-        response = clean_text(learned)
+        response = learned
     else:
-        msg = message_text.lower()
-
-        if any(w in msg for w in ["hello", "hi", "hey", "namaste"]):
-            response = f"Namaste {user.first_name}! 🙏"
-        elif "how are you" in msg:
-            response = "Main badhiya hoon 😊"
-        elif "who are you" in msg:
-            response = f"Main {BOT_NAME} hoon."
-        elif "?" in msg:
-            response = "Achha sawaal hai 🤔"
+        # 2️⃣ AI fallback
+        ai_reply = get_ai_response(message_text)
+        if ai_reply:
+            response = ai_reply[:700]
         else:
+            # 3️⃣ Stylish fallback
             response = random.choice([
-                "Samajh gaya 👍",
-                "Interesting 😄",
-                "Aur batao!",
-                "Nice 🙂"
+                "🔥 Interesting!",
+                "😎 Vibe mast hai!",
+                "⚡ Energy detected!",
+                "🧠 Processing..."
             ])
 
-    # Anti repeat spam
+    # Anti repeat
     if user_id in last_replies and last_replies[user_id] == response:
         return
 
@@ -172,14 +178,12 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # ==============================
 
 def main():
-    print("Bot Running Secure Mode...")
+    print("🔥 Hybrid AI Bot Running...")
     app = Application.builder().token(TOKEN).build()
 
     app.add_handler(CommandHandler("start", start))
-    app.add_handler(CommandHandler("help", help_cmd))
     app.add_handler(CommandHandler("clear", clear))
     app.add_handler(CommandHandler("stats", stats))
-    app.add_handler(CommandHandler("learn", learn))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
 
     app.run_polling()
