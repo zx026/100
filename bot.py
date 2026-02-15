@@ -14,7 +14,7 @@ from telegram.ext import Application, CommandHandler, MessageHandler, filters, C
 # 🔑 CONFIG
 # ==============================
 
-TOKEN = "PASTE_NEW_TOKEN_HERE"
+TOKEN = "6580496721:AAE0E4NMPUUX2jpHy-SWV5boVCreQeWt6CY"
 OWNER_ID = 8525538455
 BOT_NAME = "SmartBot"
 DATA_FILE = "conversation_data.json"
